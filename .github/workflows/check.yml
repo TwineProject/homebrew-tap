@@ -1,0 +1,28 @@
+name: Check tap
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Tap validation
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install validation tools
+        run: brew install actionlint shellcheck
+      - name: Check cask and updater
+        run: make check
+      - name: Audit released app
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+        run: make audit-online
+      - name: Verify installation and removal
+        run: make install-smoke
