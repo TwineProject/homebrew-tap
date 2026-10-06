@@ -90,10 +90,11 @@ and pass the checks. The bot enables auto-merge only for its own verified update
 to `Casks/twine-app.rb`; it does not auto-merge other contributions. Human approval
 is not required for these release updates.
 
-See [the one-time GitHub App and branch protection setup](docs/automation.md)
-to activate this automation. The App needs access only to this tap, with Contents
-and Pull requests read/write permissions. No token for the source repository is
-required. Repository owners can manage the settings and team membership.
+The update workflow requires a `TAP_APP_CLIENT_ID` repository variable and a
+`TAP_APP_PRIVATE_KEY` Actions secret for the dedicated GitHub App. The App needs
+access only to this tap, with Contents and Pull requests read/write permissions.
+No token for the source repository is required. Repository owners can manage the
+settings and team membership.
 
 Homebrew installs new versions when users run `brew upgrade`. Twine has no
 automatic updater inside the app.

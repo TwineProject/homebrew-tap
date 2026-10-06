@@ -23,7 +23,6 @@ def main():
     protection = {
         "required_status_checks": {
             "strict": True,
-            "contexts": [],
             "checks": [{"context": "Tap validation", "app_id": actions_app["id"]}],
         },
         "enforce_admins": True,
