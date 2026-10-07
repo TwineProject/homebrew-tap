@@ -36,8 +36,9 @@ test:
 
 check: lint test
 
+# Validate the pinned release independently of the latest GitHub release.
 audit-online: link-tap
-	brew audit --cask --online $(CASK)
+	brew audit --cask --online --except=livecheck_version $(CASK)
 
 install-smoke: link-tap
 	bash scripts/install-smoke.sh

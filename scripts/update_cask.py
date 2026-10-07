@@ -22,10 +22,6 @@ def version_tuple(version):
     return tuple(int(part) for part in version.split("."))
 
 
-def release_architecture(version):
-    return "arm64" if version_tuple(version) >= (0, 2, 1) else "universal"
-
-
 def release_asset(release):
     if release["draft"] or release["prerelease"] or not release["published_at"]:
         raise ValueError("Only published stable releases can update the cask")
@@ -33,18 +29,20 @@ def release_asset(release):
     if not tag.startswith("v"):
         raise ValueError(f"Expected a vMAJOR.MINOR.PATCH tag, got {tag}")
     version = tag[1:]
-    architecture = release_architecture(version)
+    version_tuple(version)
     assets = release["assets"]
     for extension in ("dmg", "zip"):
-        name = f"Twine-{version}-macos-{architecture}.{extension}"
-        matches = [asset for asset in assets if asset["name"] == name]
+        names = {f"Twine-{version}-macos-{architecture}.{extension}": architecture
+                 for architecture in ("arm64", "universal")}
+        matches = [asset for asset in assets if asset["name"] in names]
         if len(matches) > 1:
-            raise ValueError(f"Duplicate release asset: {name}")
+            raise ValueError(f"Duplicate or ambiguous Twine {extension.upper()} assets")
         if matches:
             if sum(asset["name"] == "SHA256SUMS" for asset in assets) != 1:
                 raise ValueError("Expected exactly one SHA256SUMS release asset")
-            return version, extension, matches[0]
-    raise ValueError(f"Release has no {architecture} Twine DMG or ZIP")
+            asset = matches[0]
+            return version, extension, names[asset["name"]], asset
+    raise ValueError("Release has no supported Twine DMG or ZIP")
 
 
 def verified_checksum(archive, checksums, asset):
@@ -82,8 +80,7 @@ def app_source(archive, version, extension):
 
 
 def update_cask(release, cask=CASK):
-    version, extension, asset = release_asset(release)
-    architecture = release_architecture(version)
+    version, extension, architecture, asset = release_asset(release)
     contents = cask.read_text()
     current = re.findall(r'^  version "([^"]+)"$', contents, re.MULTILINE)
     if len(current) != 1:
