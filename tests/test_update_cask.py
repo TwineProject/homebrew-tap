@@ -1,12 +1,26 @@
 import hashlib
 from pathlib import Path
-import re
 import tempfile
 import unittest
 import zipfile
 from unittest.mock import patch
 
 from scripts.update_cask import app_source, release_asset, update_cask, verified_checksum
+
+
+# Keep the starting cask independent of the version updated by the workflow.
+UNIVERSAL_CASK = """\
+cask "twine-app" do
+  version "0.1.0"
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+
+  url "https://github.com/aravind-n/twine/releases/download/v#{version}/Twine-#{version}-macos-universal.zip"
+
+  depends_on macos: :tahoe
+
+  app "Twine-#{version}/Twine.app"
+end
+"""
 
 
 def release(version="0.2.0", extensions=("dmg", "zip"), architecture="universal"):
@@ -117,10 +131,7 @@ class UpdateCaskTests(unittest.TestCase):
             self.assertEqual(cask.read_text(), source)
 
     def test_verified_new_release_updates_zip_to_dmg(self):
-        original = (Path(__file__).resolve().parents[1] /
-                    "Casks/twine-app.rb").read_text()
-        source = re.sub(r'^  version "[^"]+"$', '  version "0.0.0"', original,
-                        flags=re.MULTILINE)
+        source = UNIVERSAL_CASK
         with tempfile.TemporaryDirectory() as directory:
             cask = Path(directory) / "twine-app.rb"
             cask.write_text(source)
@@ -140,7 +151,7 @@ class UpdateCaskTests(unittest.TestCase):
             self.assertIn('app "Twine.app"', result)
 
     def test_verified_arm64_updates_add_a_single_architecture_requirement(self):
-        source = (Path(__file__).resolve().parents[1] / "Casks/twine-app.rb").read_text()
+        source = UNIVERSAL_CASK
         with tempfile.TemporaryDirectory() as directory:
             cask = Path(directory) / "twine-app.rb"
             cask.write_text(source)
@@ -171,7 +182,7 @@ class UpdateCaskTests(unittest.TestCase):
             self.assertEqual(cask.read_text(), result)
 
     def test_failed_arm64_verification_preserves_universal_cask(self):
-        source = (Path(__file__).resolve().parents[1] / "Casks/twine-app.rb").read_text()
+        source = UNIVERSAL_CASK
         with tempfile.TemporaryDirectory() as directory:
             cask = Path(directory) / "twine-app.rb"
             cask.write_text(source)
