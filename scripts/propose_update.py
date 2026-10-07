@@ -93,7 +93,8 @@ def propose_update(root, version, app_slug, repository):
         pull["state"] != "OPEN"
         or pull["isDraft"]
         or pull["isCrossRepository"]
-        or pull["author"]["login"] != bot
+        or pull["author"].get("is_bot") is not True
+        or pull["author"]["login"] != f"app/{app_slug}"
         or pull["baseRefName"] != "main"
         or pull["headRefName"] != branch
         or pull["headRefOid"] != head

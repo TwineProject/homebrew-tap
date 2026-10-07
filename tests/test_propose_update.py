@@ -63,7 +63,8 @@ class ProposeUpdateTests(unittest.TestCase):
             head = self.remote_head()
             files = self.git("diff", "--name-only", "main", head).splitlines()
             pull = {
-                "number": 7, "author": {"login": self.bot}, "baseRefName": "main",
+                "number": 7, "author": {"login": "app/twine-tap-updater", "is_bot": True},
+                "baseRefName": "main",
                 "headRefName": self.branch, "headRefOid": head,
                 "isCrossRepository": False, "isDraft": False, "state": "OPEN",
                 "files": [{"path": path} for path in files],
@@ -142,6 +143,19 @@ class ProposeUpdateTests(unittest.TestCase):
 
     def test_refuses_changed_pr_before_enabling_merge(self):
         self.overrides = {"headRefOid": "0" * 40}
+        with self.assertRaisesRegex(ValueError, "exactly the validated"):
+            self.propose()
+        self.assertFalse(self.merge_calls())
+
+
+    def test_refuses_changed_pr_author_before_enabling_merge(self):
+        self.overrides = {"author": {"login": "app/someone-else", "is_bot": True}}
+        with self.assertRaisesRegex(ValueError, "exactly the validated"):
+            self.propose()
+        self.assertFalse(self.merge_calls())
+
+    def test_refuses_non_bot_identity_before_enabling_merge(self):
+        self.overrides = {"author": {"login": "app/twine-tap-updater", "is_bot": False}}
         with self.assertRaisesRegex(ValueError, "exactly the validated"):
             self.propose()
         self.assertFalse(self.merge_calls())
