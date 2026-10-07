@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+  checks: read
 
 concurrency:
   group: update-twine-cask
@@ -46,10 +48,11 @@ jobs:
           make check
           make audit-online
           make install-smoke
-      - name: Open the update PR and enable auto-merge
+      - name: Open the update PR and merge after validation
         if: steps.update.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_CHECK_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ steps.update.outputs.version }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}

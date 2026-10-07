@@ -81,14 +81,15 @@ downgrades the cask or replaces a published version in place.
 
 The **Update Twine cask** workflow checks the latest published stable release
 from `aravind-n/twine` daily at 12:17 UTC. It verifies the download checksum,
-validates the cask, and opens a PR as a dedicated GitHub App. The workflow enables
-squash auto-merge for that PR's exact commit; GitHub merges after the required
-**Tap validation** check passes. You can also start it manually from Actions.
+validates the cask, and opens a PR as a dedicated GitHub App. The workflow waits
+for the required **Tap validation** check, then squash-merges that PR's exact
+validated commit. You can also start it manually from Actions.
 
 Only the `maintainers` team and update App can merge to `main`. Both must use PRs
-and pass the checks. The bot enables auto-merge only for its own verified update
-to `Casks/twine-app.rb`; it does not auto-merge other contributions. Human approval
-is not required for these release updates.
+and pass the checks, including administrators. The bot merges only its own
+verified update to `Casks/twine-app.rb`; it does not merge other contributions.
+Human approval is not required for these release updates. GitHub's general
+auto-merge option is disabled; automatic merging is performed by this updater.
 
 The update workflow requires a `TAP_APP_CLIENT_ID` repository variable and a
 `TAP_APP_PRIVATE_KEY` Actions secret for the dedicated GitHub App. The App needs

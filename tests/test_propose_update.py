@@ -35,6 +35,9 @@ class ProposeUpdateTests(unittest.TestCase):
         self.pulls = []
         self.overrides = {}
         self.gh_calls = []
+        self.validation_states = ["SUCCESS"]
+        self.validation_head = None
+        self.check_tokens = []
         self.branch = "cask/twine-app-0.3.0"
         self.bot = "twine-tap-updater[bot]"
         self.real_run = updater.run
@@ -47,9 +50,9 @@ class ProposeUpdateTests(unittest.TestCase):
     def remote_head(self):
         return self.git("--git-dir", str(self.remote), "rev-parse", self.branch)
 
-    def fake_run(self, root, *args):
+    def fake_run(self, root, *args, **kwargs):
         if args[0] != "gh":
-            return self.real_run(root, *args)
+            return self.real_run(root, *args, **kwargs)
         self.gh_calls.append(args)
         if args[1:3] == ("api", "--method"):
             return json.dumps(self.pulls)
@@ -61,6 +64,20 @@ class ProposeUpdateTests(unittest.TestCase):
             return "https://github.com/TwineProject/homebrew-tap/pull/7"
         if args[1:3] == ("pr", "view"):
             head = self.remote_head()
+            if args[-1] == "headRefOid,statusCheckRollup":
+                self.check_tokens.append(kwargs["token"])
+                state = self.validation_states[0]
+                if len(self.validation_states) > 1:
+                    self.validation_states.pop(0)
+                checks = [] if state is None else [{
+                    "__typename": "CheckRun", "name": "Tap validation",
+                    "status": "IN_PROGRESS" if state == "PENDING" else "COMPLETED",
+                    "conclusion": "" if state == "PENDING" else state,
+                }]
+                return json.dumps({
+                    "headRefOid": self.validation_head or head,
+                    "statusCheckRollup": checks,
+                })
             files = self.git("diff", "--name-only", "main", head).splitlines()
             pull = {
                 "number": 7, "author": {"login": "app/twine-tap-updater", "is_bot": True},
@@ -71,12 +88,14 @@ class ProposeUpdateTests(unittest.TestCase):
             }
             return json.dumps(pull | self.overrides)
         if args[1:3] == ("pr", "merge"):
-            return "Auto-merge enabled"
+            return "Merged after validation"
         raise AssertionError(f"Unexpected GitHub command: {args}")
 
     def propose(self):
         with patch.object(updater, "run", self.fake_run):
-            updater.propose_update(self.root, "0.3.0", "twine-tap-updater", updater.REPOSITORY)
+            updater.propose_update(
+                self.root, "0.3.0", "twine-tap-updater", updater.REPOSITORY, "read-check-token"
+            )
 
     def publish_existing_branch(self, extra_change=False):
         self.git("switch", "-c", self.branch)
@@ -98,8 +117,9 @@ class ProposeUpdateTests(unittest.TestCase):
         self.assertEqual(self.git("show", "-s", "--format=%an", head), self.bot)
         self.assertEqual(self.merge_calls(), [(
             "gh", "pr", "merge", "7", "--repo", updater.REPOSITORY,
-            "--auto", "--squash", "--match-head-commit", head,
+            "--squash", "--match-head-commit", head,
         )])
+        self.assertEqual(self.check_tokens, ["read-check-token"])
 
     def test_refuses_changes_outside_the_cask(self):
         (self.root / "README.md").write_text("Unexpected edit\n")
@@ -141,23 +161,56 @@ class ProposeUpdateTests(unittest.TestCase):
         self.assertFalse(self.merge_calls())
         self.assertEqual(self.git("ls-remote", "--heads", "origin", self.branch), "")
 
-    def test_refuses_changed_pr_before_enabling_merge(self):
+    def test_refuses_changed_pr_before_merging(self):
         self.overrides = {"headRefOid": "0" * 40}
         with self.assertRaisesRegex(ValueError, "exactly the validated"):
             self.propose()
         self.assertFalse(self.merge_calls())
 
-
-    def test_refuses_changed_pr_author_before_enabling_merge(self):
+    def test_refuses_changed_pr_author_before_merging(self):
         self.overrides = {"author": {"login": "app/someone-else", "is_bot": True}}
         with self.assertRaisesRegex(ValueError, "exactly the validated"):
             self.propose()
         self.assertFalse(self.merge_calls())
 
-    def test_refuses_non_bot_identity_before_enabling_merge(self):
+    def test_refuses_non_bot_identity_before_merging(self):
         self.overrides = {"author": {"login": "app/twine-tap-updater", "is_bot": False}}
         with self.assertRaisesRegex(ValueError, "exactly the validated"):
             self.propose()
+        self.assertFalse(self.merge_calls())
+
+    def test_waits_for_checks_to_appear_before_merging(self):
+        self.validation_states = [None, "SUCCESS"]
+        with patch.object(updater.time, "sleep") as wait:
+            self.propose()
+        wait.assert_called_once_with(10)
+        self.assertEqual(len(self.merge_calls()), 1)
+
+    def test_waits_for_pending_validation_before_merging(self):
+        self.validation_states = ["PENDING", "SUCCESS"]
+        with patch.object(updater.time, "sleep") as wait:
+            self.propose()
+        wait.assert_called_once_with(10)
+        self.assertEqual(len(self.merge_calls()), 1)
+
+    def test_failed_validation_does_not_merge(self):
+        self.validation_states = ["FAILURE"]
+        with self.assertRaisesRegex(ValueError, "did not pass"):
+            self.propose()
+        self.assertFalse(self.merge_calls())
+
+    def test_changed_head_during_validation_does_not_merge(self):
+        self.validation_head = "0" * 40
+        with self.assertRaisesRegex(ValueError, "changed while waiting"):
+            self.propose()
+        self.assertFalse(self.merge_calls())
+
+    def test_validation_timeout_does_not_merge(self):
+        self.validation_states = [None]
+        with patch.object(updater.time, "monotonic", side_effect=[0, 0, 721]), \
+                patch.object(updater.time, "sleep"):
+            with self.assertRaisesRegex(TimeoutError, "Timed out"):
+                self.propose()
         self.assertFalse(self.merge_calls())
 
 
