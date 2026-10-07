@@ -9,11 +9,11 @@ from unittest.mock import patch
 from scripts.update_cask import app_source, release_asset, update_cask, verified_checksum
 
 
-def release(version="0.2.0", extensions=("dmg", "zip")):
+def release(version="0.2.0", extensions=("dmg", "zip"), architecture="universal"):
     return {
         "tag_name": f"v{version}", "draft": False, "prerelease": False,
         "published_at": "2026-10-06T12:00:00Z",
-        "assets": [{"name": f"Twine-{version}-macos-universal.{extension}"}
+        "assets": [{"name": f"Twine-{version}-macos-{architecture}.{extension}"}
                    for extension in extensions] + [{"name": "SHA256SUMS"}],
     }
 
@@ -32,6 +32,24 @@ class UpdateCaskTests(unittest.TestCase):
     def test_dmg_is_preferred_and_zip_is_supported(self):
         self.assertEqual(release_asset(release())[1], "dmg")
         self.assertEqual(release_asset(release(extensions=("zip",)))[1], "zip")
+
+    def test_arm64_packages_are_required_from_0_2_1(self):
+        for version in ("0.2.1", "0.3.0", "1.0.0"):
+            for extension in ("dmg", "zip"):
+                with self.subTest(version=version, extension=extension):
+                    candidate = release(version, (extension,), "arm64")
+                    selected = release_asset(candidate)
+                    self.assertEqual(selected[1], extension)
+                    self.assertEqual(selected[2]["name"],
+                                     f"Twine-{version}-macos-arm64.{extension}")
+                    with self.assertRaisesRegex(ValueError, "no arm64"):
+                        release_asset(release(version, (extension,)))
+
+    def test_ambiguous_arm64_assets_are_rejected(self):
+        candidate = release("0.2.1", architecture="arm64")
+        candidate["assets"].append(candidate["assets"][0])
+        with self.assertRaisesRegex(ValueError, "Duplicate release asset"):
+            release_asset(candidate)
 
     def test_zip_app_layout_and_ambiguous_archives(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -120,6 +138,54 @@ class UpdateCaskTests(unittest.TestCase):
             self.assertIn('version "0.2.0"', result)
             self.assertIn('macos-universal.dmg"', result)
             self.assertIn('app "Twine.app"', result)
+
+    def test_verified_arm64_updates_add_a_single_architecture_requirement(self):
+        source = (Path(__file__).resolve().parents[1] / "Casks/twine-app.rb").read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            cask = Path(directory) / "twine-app.rb"
+            cask.write_text(source)
+
+            def download(args, **kwargs):
+                name = args[args.index("--pattern") + 1]
+                target = Path(args[args.index("--dir") + 1])
+                (target / name).write_bytes(b"ARM64 released app")
+                checksum = hashlib.sha256(b"ARM64 released app").hexdigest()
+                (target / "SHA256SUMS").write_text(f"{checksum}  ./{name}\n")
+
+            with patch("scripts.update_cask.subprocess.run", side_effect=download):
+                for version in ("0.2.1", "0.2.2"):
+                    self.assertEqual(update_cask(release(version, architecture="arm64"), cask),
+                                     (version, True))
+                    result = cask.read_text()
+                    self.assertIn(f'version "{version}"', result)
+                    self.assertIn('Twine-#{version}-macos-arm64.dmg"', result)
+                    self.assertIn(hashlib.sha256(b"ARM64 released app").hexdigest(), result)
+                    self.assertEqual(result.count('depends_on arch: :arm64'), 1)
+                    self.assertIn('depends_on macos: :tahoe', result)
+                    self.assertLess(result.index('depends_on arch:'), result.index('depends_on macos:'))
+
+            with patch("scripts.update_cask.subprocess.run") as download:
+                self.assertEqual(update_cask(release("0.2.2", architecture="arm64"), cask),
+                                 ("0.2.2", False))
+                download.assert_not_called()
+            self.assertEqual(cask.read_text(), result)
+
+    def test_failed_arm64_verification_preserves_universal_cask(self):
+        source = (Path(__file__).resolve().parents[1] / "Casks/twine-app.rb").read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            cask = Path(directory) / "twine-app.rb"
+            cask.write_text(source)
+
+            def download(args, **kwargs):
+                target = Path(args[args.index("--dir") + 1])
+                name = "Twine-0.2.1-macos-arm64.dmg"
+                (target / name).write_bytes(b"tampered ARM64 app")
+                (target / "SHA256SUMS").write_text(f"{'0' * 64}  {name}\n")
+
+            with patch("scripts.update_cask.subprocess.run", side_effect=download):
+                with self.assertRaisesRegex(ValueError, "Checksum mismatch"):
+                    update_cask(release("0.2.1", architecture="arm64"), cask)
+            self.assertEqual(cask.read_text(), source)
 
     def test_failed_download_verification_leaves_cask_unchanged(self):
         source = '  version "0.1.0"\n'

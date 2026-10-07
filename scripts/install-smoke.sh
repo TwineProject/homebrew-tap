@@ -24,8 +24,15 @@ expected="$(sed -n 's/^  version "\([^"]*\)"$/\1/p' "$repo/Casks/$cask.rb")"
 actual="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
 [[ "$actual" == "$expected" ]]
 architectures="$(lipo -archs "$app/Contents/MacOS/Twine")"
-[[ " $architectures " == *" arm64 "* ]]
-[[ " $architectures " == *" x86_64 "* ]]
+required_architecture="$(sed -n 's/^  depends_on arch: :\([a-z0-9_]*\)$/\1/p' "$repo/Casks/$cask.rb")"
+case "$required_architecture" in
+    arm64) [[ "$architectures" == arm64 ]] ;;
+    "")
+        [[ " $architectures " == *" arm64 "* ]]
+        [[ " $architectures " == *" x86_64 "* ]]
+        ;;
+    *) echo "Unsupported cask architecture requirement: $required_architecture" >&2; exit 1 ;;
+esac
 codesign --verify --deep --strict "$app"
 xcrun stapler validate "$app"
 spctl --assess --type execute --verbose=2 "$app"
