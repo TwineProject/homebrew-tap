@@ -4,8 +4,8 @@ Homebrew distribution for [Twine](https://github.com/aravind-n/twine), a native
 macOS workspace for coordinating coding agents. The GitHub repository
 is `TwineProject/homebrew-tap`, which Homebrew addresses as `twineproject/tap`.
 
-Twine requires macOS 26 or later. Version 0.2.0 supports Apple Silicon and Intel;
-starting with 0.2.1, releases support Apple Silicon only.
+Twine requires macOS 26 or later. Architecture requirements follow the release
+package: ARM64 packages require Apple Silicon; universal packages also support Intel.
 
 ## Install and update
 
@@ -50,6 +50,10 @@ make audit-online
 make install-smoke
 ```
 
+`make audit-online` validates the pinned release independently of which version
+is currently latest on GitHub. The updater discovers new stable releases;
+the audit and installation checks validate the selected package.
+
 `make install-smoke` installs into a temporary application directory and checks
 the bundle version, required architectures, and code signature. It validates the
 stapled notarization tickets and Gatekeeper acceptance for the app and DMG, then
@@ -60,12 +64,11 @@ The Homebrew checks register this checkout as `twineproject/tap` through a local
 symlink. They refuse to replace an existing tap pointing at a different checkout.
 To remove the local registration later, run `brew untap twineproject/tap`.
 
-To update the cask locally after publishing a stable release:
+To update the cask locally after publishing a stable release, run `make update`.
+Set `RELEASE_TAG` to a published `vMAJOR.MINOR.PATCH` tag to select a release.
 
 ```sh
 make update
-# Or select a particular published stable release:
-make update RELEASE_TAG=v0.2.0
 make check
 make audit-online
 make install-smoke
@@ -73,10 +76,11 @@ git diff -- Casks/twine-app.rb
 ```
 
 The updater accepts published `vMAJOR.MINOR.PATCH` releases from `aravind-n/twine`,
-prefers a DMG, and falls back to a ZIP. Releases before 0.2.1 use universal
-packages; 0.2.1 and later require ARM64 packages. When updating to an ARM64
-release, the updater adds `depends_on arch: :arm64` alongside the new version,
-download URL, and checksum. The currently published 0.2.0 cask stays universal.
+prefers a DMG, and falls back to a ZIP. It determines the architecture from the
+selected asset's filename, accepting ARM64 or universal packages regardless of
+release version and rejecting ambiguous packages. ARM64 packages add
+`depends_on arch: :arm64`; universal packages remove that requirement. The
+version, download URL, and checksum come from the selected release.
 The updater downloads the archive and `SHA256SUMS` and verifies the checksum
 before changing the cask. It rejects drafts, prereleases, nightlies, and
 incomplete releases, and never downgrades the cask or replaces a published

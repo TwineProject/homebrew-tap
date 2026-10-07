@@ -24,21 +24,23 @@ class ProposeUpdateTests(unittest.TestCase):
         self.git("config", "user.email", "maintainer@example.test")
         (self.root / "Casks").mkdir()
         self.cask = self.root / updater.CASK
-        self.cask.write_text('cask "twine-app" do\n  version "0.2.0"\nend\n')
+        self.current_version = "1.2.3"
+        self.version = "1.2.4"
+        self.cask.write_text(f'cask "twine-app" do\n  version "{self.current_version}"\nend\n')
         (self.root / "README.md").write_text("Tap documentation\n")
         self.git("add", ".")
         self.git("commit", "-m", "tap: add initial cask")
         self.git("init", "--bare", str(self.remote))
         self.git("remote", "add", "origin", str(self.remote))
         self.git("push", "origin", "main")
-        self.cask.write_text(self.cask.read_text().replace("0.2.0", "0.3.0"))
+        self.cask.write_text(self.cask.read_text().replace(self.current_version, self.version))
         self.pulls = []
         self.overrides = {}
         self.gh_calls = []
         self.validation_states = ["SUCCESS"]
         self.validation_head = None
         self.check_tokens = []
-        self.branch = "cask/twine-app-0.3.0"
+        self.branch = f"cask/twine-app-{self.version}"
         self.bot = "twine-tap-updater[bot]"
         self.real_run = updater.run
 
@@ -94,7 +96,7 @@ class ProposeUpdateTests(unittest.TestCase):
     def propose(self):
         with patch.object(updater, "run", self.fake_run):
             updater.propose_update(
-                self.root, "0.3.0", "twine-tap-updater", updater.REPOSITORY, "read-check-token"
+                self.root, self.version, "twine-tap-updater", updater.REPOSITORY, "read-check-token"
             )
 
     def publish_existing_branch(self, extra_change=False):
@@ -102,24 +104,36 @@ class ProposeUpdateTests(unittest.TestCase):
         if extra_change:
             (self.root / "README.md").write_text("Unexpected documentation edit\n")
         self.git("add", ".")
-        self.git("commit", "-m", "cask: replace Twine release with 0.3.0")
+        self.git("commit", "-m", f"cask: replace Twine release with {self.version}")
         self.git("push", "origin", self.branch)
         self.git("switch", "main")
-        self.cask.write_text(self.cask.read_text().replace("0.2.0", "0.3.0"))
+        self.cask.write_text(self.cask.read_text().replace(self.current_version, self.version))
 
     def merge_calls(self):
         return [args for args in self.gh_calls if args[1:3] == ("pr", "merge")]
 
     def test_new_pr_merges_only_the_published_cask_commit(self):
-        self.propose()
-        head = self.remote_head()
-        self.assertEqual(self.git("diff", "--name-only", "main", head), updater.CASK)
-        self.assertEqual(self.git("show", "-s", "--format=%an", head), self.bot)
-        self.assertEqual(self.merge_calls(), [(
-            "gh", "pr", "merge", "7", "--repo", updater.REPOSITORY,
-            "--squash", "--match-head-commit", head,
-        )])
-        self.assertEqual(self.check_tokens, ["read-check-token"])
+        for version in ("1.2.4", "1.3.0", "2.0.0", "12.34.56"):
+            with self.subTest(version=version):
+                self.git("switch", "main")
+                self.version = version
+                self.branch = f"cask/twine-app-{version}"
+                self.cask.write_text(f'cask "twine-app" do\n  version "{version}"\nend\n')
+                self.gh_calls = []
+                self.check_tokens = []
+                self.propose()
+                head = self.remote_head()
+                self.assertEqual(self.git("diff", "--name-only", "main", head), updater.CASK)
+                self.assertEqual(self.git("show", "-s", "--format=%an", head), self.bot)
+                self.assertEqual(self.merge_calls(), [(
+                    "gh", "pr", "merge", "7", "--repo", updater.REPOSITORY,
+                    "--squash", "--match-head-commit", head,
+                )])
+                self.assertEqual(self.check_tokens, ["read-check-token"])
+                creation = next(args for args in self.gh_calls if args[1:3] == ("pr", "create"))
+                self.assertEqual(creation[creation.index("--head") + 1], self.branch)
+                self.assertEqual(creation[creation.index("--title") + 1],
+                                 f"cask: replace Twine release with {version}")
 
     def test_refuses_changes_outside_the_cask(self):
         (self.root / "README.md").write_text("Unexpected edit\n")
