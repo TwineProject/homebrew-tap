@@ -22,6 +22,10 @@ def version_tuple(version):
     return tuple(int(part) for part in version.split("."))
 
 
+def release_architecture(version):
+    return "arm64" if version_tuple(version) >= (0, 2, 1) else "universal"
+
+
 def release_asset(release):
     if release["draft"] or release["prerelease"] or not release["published_at"]:
         raise ValueError("Only published stable releases can update the cask")
@@ -29,10 +33,10 @@ def release_asset(release):
     if not tag.startswith("v"):
         raise ValueError(f"Expected a vMAJOR.MINOR.PATCH tag, got {tag}")
     version = tag[1:]
-    version_tuple(version)
+    architecture = release_architecture(version)
     assets = release["assets"]
     for extension in ("dmg", "zip"):
-        name = f"Twine-{version}-macos-universal.{extension}"
+        name = f"Twine-{version}-macos-{architecture}.{extension}"
         matches = [asset for asset in assets if asset["name"] == name]
         if len(matches) > 1:
             raise ValueError(f"Duplicate release asset: {name}")
@@ -40,7 +44,7 @@ def release_asset(release):
             if sum(asset["name"] == "SHA256SUMS" for asset in assets) != 1:
                 raise ValueError("Expected exactly one SHA256SUMS release asset")
             return version, extension, matches[0]
-    raise ValueError("Release has no universal Twine DMG or ZIP")
+    raise ValueError(f"Release has no {architecture} Twine DMG or ZIP")
 
 
 def verified_checksum(archive, checksums, asset):
@@ -79,6 +83,7 @@ def app_source(archive, version, extension):
 
 def update_cask(release, cask=CASK):
     version, extension, asset = release_asset(release)
+    architecture = release_architecture(version)
     contents = cask.read_text()
     current = re.findall(r'^  version "([^"]+)"$', contents, re.MULTILINE)
     if len(current) != 1:
@@ -103,7 +108,7 @@ def update_cask(release, cask=CASK):
         "version": version,
         "sha256": checksum,
         "url": (f"https://github.com/{UPSTREAM}/releases/download/v#{{version}}/"
-                f"Twine-#{{version}}-macos-universal.{extension}"),
+                f"Twine-#{{version}}-macos-{architecture}.{extension}"),
         "app": application,
     }
     for field, value in replacements.items():
@@ -113,6 +118,18 @@ def update_cask(release, cask=CASK):
         )
         if count != 1:
             raise ValueError(f"Expected exactly one cask {field}")
+    contents, count = re.subn(r"^  depends_on arch: [^\n]+\n", "", contents,
+                              flags=re.MULTILINE)
+    if count > 1:
+        raise ValueError("Expected at most one cask architecture requirement")
+    if architecture == "arm64":
+        contents, count = re.subn(
+            r"^  depends_on macos: [^\n]+$",
+            r"  depends_on arch: :arm64\n\g<0>", contents,
+            flags=re.MULTILINE,
+        )
+        if count != 1:
+            raise ValueError("Expected exactly one cask macOS requirement")
     temporary = cask.with_suffix(".rb.tmp")
     temporary.write_text(contents)
     temporary.replace(cask)
