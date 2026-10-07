@@ -44,6 +44,9 @@ def main():
          f"repos/{REPOSITORY}/branches/main/protection", "--input", "-", "--silent"],
         input=json.dumps(protection), text=True, check=True,
     )
+    subprocess.run(
+        ["gh", "repo", "edit", REPOSITORY, "--enable-auto-merge=false"], check=True
+    )
     print("main requires a PR and passing Tap validation; only maintainers and the bot can merge")
 
 

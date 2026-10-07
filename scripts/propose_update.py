@@ -7,18 +7,42 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import time
 
 REPOSITORY = "TwineProject/homebrew-tap"
 CASK = "Casks/twine-app.rb"
 
-
-def run(root, *args):
+def run(root, *args, token=None):
     return subprocess.run(
-        args, cwd=root, check=True, text=True, stdout=subprocess.PIPE
+        args, cwd=root, check=True, text=True, stdout=subprocess.PIPE,
+        env=None if token is None else {**os.environ, "GH_TOKEN": token},
     ).stdout.rstrip("\n")
 
 
-def propose_update(root, version, app_slug, repository):
+def wait_for_validation(root, number, head, check_token, timeout=720):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        pull = json.loads(run(
+            root, "gh", "pr", "view", str(number), "--repo", REPOSITORY,
+            "--json", "headRefOid,statusCheckRollup", token=check_token,
+        ))
+        if pull["headRefOid"] != head:
+            raise ValueError("The PR changed while waiting for validation")
+        checks = [
+            check for check in (pull.get("statusCheckRollup") or [])
+            if check.get("__typename") == "CheckRun"
+            and check.get("name") == "Tap validation"
+        ]
+        if checks:
+            for check in checks:
+                if check["status"] == "COMPLETED" and check["conclusion"] != "SUCCESS":
+                    raise ValueError("Required Tap validation did not pass")
+            if all(check["status"] == "COMPLETED" for check in checks):
+                return
+        time.sleep(10)
+    raise TimeoutError("Timed out waiting for required Tap validation")
+
+def propose_update(root, version, app_slug, repository, check_token):
     if repository != REPOSITORY:
         raise ValueError("The update bot is restricted to TwineProject/homebrew-tap")
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version):
@@ -101,9 +125,10 @@ def propose_update(root, version, app_slug, repository):
         or [file["path"] for file in pull["files"]] != [CASK]
     ):
         raise ValueError("The PR must contain exactly the validated bot cask update")
+    wait_for_validation(root, pull["number"], head, check_token)
     print(run(
         root, "gh", "pr", "merge", str(pull["number"]), "--repo", repository,
-        "--auto", "--squash", "--match-head-commit", head,
+        "--squash", "--match-head-commit", head,
     ))
 
 
@@ -111,4 +136,5 @@ if __name__ == "__main__":
     propose_update(
         Path(__file__).resolve().parent.parent,
         os.environ["VERSION"], os.environ["APP_SLUG"], os.environ["GH_REPO"],
+        os.environ["GH_CHECK_TOKEN"],
     )
