@@ -7,15 +7,19 @@ import re
 import subprocess
 
 REPOSITORY = "standing-desks/homebrew-tap"
+REPOSITORIES = {REPOSITORY, "TwineProject/homebrew-tap"}
 
 
 def main():
+    repository = os.environ.get("GH_REPO", REPOSITORY)
+    if repository not in REPOSITORIES:
+        raise ValueError("Branch protection is restricted to the two maintained Twine taps")
     app_slug = os.environ.get("APP_SLUG", "")
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", app_slug):
         raise ValueError("Set APP_SLUG to the installed tap update App's slug")
     subprocess.run(["gh", "api", f"apps/{app_slug}", "--silent"], check=True)
     subprocess.run(
-        ["gh", "api", f"repos/{REPOSITORY}/branches/main", "--silent"], check=True
+        ["gh", "api", f"repos/{repository}/branches/main", "--silent"], check=True
     )
     actions_app = json.loads(subprocess.check_output(
         ["gh", "api", "apps/github-actions"], text=True
@@ -41,11 +45,11 @@ def main():
     }
     subprocess.run(
         ["gh", "api", "--method", "PUT",
-         f"repos/{REPOSITORY}/branches/main/protection", "--input", "-", "--silent"],
+         f"repos/{repository}/branches/main/protection", "--input", "-", "--silent"],
         input=json.dumps(protection), text=True, check=True,
     )
     subprocess.run(
-        ["gh", "repo", "edit", REPOSITORY, "--enable-auto-merge=false"], check=True
+        ["gh", "repo", "edit", repository, "--enable-auto-merge=false"], check=True
     )
     print("main requires a PR and passing Tap validation; only maintainers and the bot can merge")
 

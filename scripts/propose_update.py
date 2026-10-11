@@ -10,6 +10,7 @@ import tempfile
 import time
 
 REPOSITORY = "standing-desks/homebrew-tap"
+REPOSITORIES = {REPOSITORY, "TwineProject/homebrew-tap"}
 CASK = "Casks/twine-app.rb"
 
 def run(root, *args, token=None):
@@ -19,11 +20,11 @@ def run(root, *args, token=None):
     ).stdout.rstrip("\n")
 
 
-def wait_for_validation(root, number, head, check_token, timeout=720):
+def wait_for_validation(root, number, head, check_token, repository=REPOSITORY, timeout=720):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         pull = json.loads(run(
-            root, "gh", "pr", "view", str(number), "--repo", REPOSITORY,
+            root, "gh", "pr", "view", str(number), "--repo", repository,
             "--json", "headRefOid,statusCheckRollup", token=check_token,
         ))
         if pull["headRefOid"] != head:
@@ -43,8 +44,9 @@ def wait_for_validation(root, number, head, check_token, timeout=720):
     raise TimeoutError("Timed out waiting for required Tap validation")
 
 def propose_update(root, version, app_slug, repository, check_token):
-    if repository != REPOSITORY:
-        raise ValueError("The update bot is restricted to standing-desks/homebrew-tap")
+    if repository not in REPOSITORIES:
+        raise ValueError("The update bot is restricted to the two maintained Twine taps")
+    owner = repository.split("/", 1)[0]
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version):
         raise ValueError("Expected a stable MAJOR.MINOR.PATCH version")
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", app_slug):
@@ -56,7 +58,7 @@ def propose_update(root, version, app_slug, repository, check_token):
     bot = f"{app_slug}[bot]"
     pulls = json.loads(run(
         root, "gh", "api", "--method", "GET", f"repos/{repository}/pulls",
-        "-f", "state=all", "-f", f"head=standing-desks:{branch}",
+        "-f", "state=all", "-f", f"head={owner}:{branch}",
         "-f", "base=main", "-f", "per_page=100",
     ))
     existing = max(pulls, key=lambda pull: pull["number"], default=None)
@@ -125,7 +127,7 @@ def propose_update(root, version, app_slug, repository, check_token):
         or [file["path"] for file in pull["files"]] != [CASK]
     ):
         raise ValueError("The PR must contain exactly the validated bot cask update")
-    wait_for_validation(root, pull["number"], head, check_token)
+    wait_for_validation(root, pull["number"], head, check_token, repository)
     print(run(
         root, "gh", "pr", "merge", str(pull["number"]), "--repo", repository,
         "--squash", "--match-head-commit", head,
