@@ -2,16 +2,18 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
-cask=twine-app
+cask=twine-ade
 qualified_cask="${TAP:-standing-desks/tap}/$cask"
 case "$qualified_cask" in
-    standing-desks/tap/twine-app|twineproject/tap/twine-app) ;;
+    standing-desks/tap/twine-ade|twineproject/tap/twine-ade) ;;
     *) echo "Unsupported Twine cask: $qualified_cask" >&2; exit 1 ;;
 esac
-if brew list --cask "$cask" >/dev/null 2>&1; then
-    echo "Uninstall $cask before running the installation smoke check" >&2
-    exit 1
-fi
+for installed_token in "$cask" twine-app; do
+    if brew list --cask "$installed_token" >/dev/null 2>&1; then
+        echo "Uninstall $installed_token before running the installation smoke check" >&2
+        exit 1
+    fi
+done
 
 app_directory="$(mktemp -d "${TMPDIR:-/tmp}/twine-cask-install.XXXXXX")"
 cleanup() {

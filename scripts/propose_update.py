@@ -11,7 +11,7 @@ import time
 
 REPOSITORY = "standing-desks/homebrew-tap"
 REPOSITORIES = {REPOSITORY, "TwineProject/homebrew-tap"}
-CASK = "Casks/twine-app.rb"
+CASK = "Casks/twine-ade.rb"
 
 def run(root, *args, token=None):
     return subprocess.run(
@@ -54,7 +54,7 @@ def propose_update(root, version, app_slug, repository, check_token):
     if f'  version "{version}"' not in (root / CASK).read_text():
         raise ValueError("The cask does not contain the validated version")
 
-    branch = f"cask/twine-app-{version}"
+    branch = f"cask/twine-ade-{version}"
     bot = f"{app_slug}[bot]"
     pulls = json.loads(run(
         root, "gh", "api", "--method", "GET", f"repos/{repository}/pulls",
@@ -71,7 +71,7 @@ def propose_update(root, version, app_slug, repository, check_token):
 
     changes = run(root, "git", "status", "--porcelain", "--untracked-files=all")
     if changes not in (f" M {CASK}", f"M  {CASK}"):
-        raise ValueError("A release update must change only Casks/twine-app.rb")
+        raise ValueError("A release update must change only Casks/twine-ade.rb")
     run(root, "git", "add", "--", CASK)
     validated_tree = run(root, "git", "write-tree")
     run(root, "gh", "auth", "setup-git", "--hostname", "github.com")
