@@ -24,7 +24,7 @@ cask "twine-ade" do
   version "{version}"
   sha256 "{'0' * 64}"
 
-  url "https://github.com/aravind-n/twine/releases/download/v#{{version}}/Twine-#{{version}}-macos-{architecture}.zip"
+  url "https://github.com/standing-desks/twine/releases/download/v#{{version}}/Twine-#{{version}}-macos-{architecture}.zip"
 
 {requirement}  depends_on macos: :tahoe
 

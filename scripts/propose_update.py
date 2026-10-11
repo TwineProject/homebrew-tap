@@ -102,7 +102,7 @@ def propose_update(root, version, app_slug, repository, check_token):
                 f"Update Twine to the published stable release v{version}.\n\n"
                 "The updater verified the archive against SHA256SUMS. Cask style, "
                 "audit, updater tests, and installation checks passed before this PR.\n\n"
-                f"Upstream release: https://github.com/aravind-n/twine/releases/tag/v{version}\n"
+                f"Upstream release: https://github.com/standing-desks/twine/releases/tag/v{version}\n"
             )
             print(run(
                 root, "gh", "pr", "create", "--repo", repository,
