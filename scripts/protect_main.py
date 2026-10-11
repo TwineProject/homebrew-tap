@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 
-REPOSITORY = "TwineProject/homebrew-tap"
+REPOSITORY = "standing-desks/homebrew-tap"
 
 
 def main():

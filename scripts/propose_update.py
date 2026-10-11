@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import time
 
-REPOSITORY = "TwineProject/homebrew-tap"
+REPOSITORY = "standing-desks/homebrew-tap"
 CASK = "Casks/twine-app.rb"
 
 def run(root, *args, token=None):
@@ -44,7 +44,7 @@ def wait_for_validation(root, number, head, check_token, timeout=720):
 
 def propose_update(root, version, app_slug, repository, check_token):
     if repository != REPOSITORY:
-        raise ValueError("The update bot is restricted to TwineProject/homebrew-tap")
+        raise ValueError("The update bot is restricted to standing-desks/homebrew-tap")
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version):
         raise ValueError("Expected a stable MAJOR.MINOR.PATCH version")
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", app_slug):
@@ -56,7 +56,7 @@ def propose_update(root, version, app_slug, repository, check_token):
     bot = f"{app_slug}[bot]"
     pulls = json.loads(run(
         root, "gh", "api", "--method", "GET", f"repos/{repository}/pulls",
-        "-f", "state=all", "-f", f"head=TwineProject:{branch}",
+        "-f", "state=all", "-f", f"head=standing-desks:{branch}",
         "-f", "base=main", "-f", "per_page=100",
     ))
     existing = max(pulls, key=lambda pull: pull["number"], default=None)

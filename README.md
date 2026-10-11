@@ -2,17 +2,17 @@
 
 Homebrew distribution for [Twine](https://github.com/aravind-n/twine), a native
 macOS workspace for coordinating coding agents. The GitHub repository
-is `TwineProject/homebrew-tap`, which Homebrew addresses as `twineproject/tap`.
+is `standing-desks/homebrew-tap`, which Homebrew addresses as `standing-desks/tap`.
 
 Twine requires macOS 26 or later. Architecture requirements follow the release
 package: ARM64 packages require Apple Silicon; universal packages also support Intel.
 
 ## Install and update
 
-Once this repository is published on GitHub:
+To install:
 
 ```sh
-brew install --cask twineproject/tap/twine-app
+brew install --cask standing-desks/tap/twine-app
 ```
 
 To update:
@@ -39,6 +39,33 @@ The cask installs the published DMG for the release. Release packages are
 Developer ID signed and notarized, and Homebrew verifies the download checksum before
 installation. See [Twine's install notes](https://aravind-n.github.io/twine/documentation/guide/#install).
 
+## Migrating from TwineProject
+
+This tap moved from `TwineProject/homebrew-tap` to
+`standing-desks/homebrew-tap`. GitHub redirects the old repository URL, and
+current Homebrew follows that redirect when updating the tap. Homebrew clears
+trust for the old tap name when the owner changes, so trust the cask at its new
+location once:
+
+```sh
+brew update
+brew trust --cask standing-desks/tap/twine-app
+brew upgrade --cask twine-app
+```
+
+Quit Twine before upgrading. If you updated an older Homebrew installation and
+`brew tap` still lists `twineproject/tap`, run `brew update` again before trusting
+the new cask. After migration, use the regular update commands above.
+
+In Brewfiles, replace `tap "twineproject/tap"` with `tap "standing-desks/tap"`
+and update any fully qualified cask references to
+`standing-desks/tap/twine-app`. If your organization manages
+`HOMEBREW_ALLOWED_TAPS`, it must allow the new tap.
+
+The cask remains `twine-app`, and the migration does not require uninstalling
+Twine. Avoid `brew untap --force` as a migration shortcut: it can uninstall
+packages from the tap.
+
 ## Validate locally
 
 Install Homebrew, Python 3, GitHub CLI, `actionlint`, and `shellcheck`. Authenticate
@@ -60,9 +87,9 @@ stapled notarization tickets and Gatekeeper acceptance for the app and DMG, then
 uninstalls the cask. It does not launch Twine and refuses to run if this cask is
 already installed.
 
-The Homebrew checks register this checkout as `twineproject/tap` through a local
+The Homebrew checks register this checkout as `standing-desks/tap` through a local
 symlink. They refuse to replace an existing tap pointing at a different checkout.
-To remove the local registration later, run `brew untap twineproject/tap`.
+To remove the local registration later, run `brew untap standing-desks/tap`.
 
 To update the cask locally after publishing a stable release, run `make update`.
 Set `RELEASE_TAG` to a published `vMAJOR.MINOR.PATCH` tag to select a release.

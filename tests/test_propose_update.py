@@ -63,7 +63,7 @@ class ProposeUpdateTests(unittest.TestCase):
         if args[1:3] == ("auth", "setup-git"):
             return ""
         if args[1:3] == ("pr", "create"):
-            return "https://github.com/TwineProject/homebrew-tap/pull/7"
+            return "https://github.com/standing-desks/homebrew-tap/pull/7"
         if args[1:3] == ("pr", "view"):
             head = self.remote_head()
             if args[-1] == "headRefOid,statusCheckRollup":
@@ -134,6 +134,19 @@ class ProposeUpdateTests(unittest.TestCase):
                 self.assertEqual(creation[creation.index("--head") + 1], self.branch)
                 self.assertEqual(creation[creation.index("--title") + 1],
                                  f"cask: replace Twine release with {version}")
+                lookup = next(args for args in self.gh_calls if args[1:3] == ("api", "--method"))
+                self.assertIn("repos/standing-desks/homebrew-tap/pulls", lookup)
+                self.assertIn(f"head=standing-desks:{self.branch}", lookup)
+
+    def test_refuses_other_repositories_before_publishing(self):
+        for repository in ("TwineProject/homebrew-tap", "someone-else/homebrew-tap"):
+            with self.subTest(repository=repository), patch.object(updater, "run", self.fake_run):
+                with self.assertRaisesRegex(ValueError, "restricted to standing-desks/homebrew-tap"):
+                    updater.propose_update(
+                        self.root, self.version, "twine-tap-updater", repository, "read-check-token"
+                    )
+                self.assertEqual(self.gh_calls, [])
+                self.assertEqual(self.git("ls-remote", "--heads", "origin", self.branch), "")
 
     def test_refuses_changes_outside_the_cask(self):
         (self.root / "README.md").write_text("Unexpected edit\n")

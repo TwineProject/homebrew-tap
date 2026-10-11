@@ -17,7 +17,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-brew install --cask --appdir="$app_directory" "twineproject/tap/$cask"
+brew install --cask --appdir="$app_directory" "standing-desks/tap/$cask"
 app="$app_directory/Twine.app"
 test -d "$app"
 expected="$(sed -n 's/^  version "\([^"]*\)"$/\1/p' "$repo/Casks/$cask.rb")"
@@ -36,7 +36,7 @@ esac
 codesign --verify --deep --strict "$app"
 xcrun stapler validate "$app"
 spctl --assess --type execute --verbose=2 "$app"
-archive="$(brew --cache --cask "twineproject/tap/$cask")"
+archive="$(brew --cache --cask "standing-desks/tap/$cask")"
 if [[ "$archive" == *.dmg ]]; then
     codesign --verify --strict "$archive"
     xcrun stapler validate "$archive"
