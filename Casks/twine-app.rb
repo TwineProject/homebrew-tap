@@ -1,6 +1,6 @@
 cask "twine-app" do
-  version "0.2.2"
-  sha256 "f9c37a61e5ed4ec7134f7aeda043c1c790b0e828933df5c7f4d8904f06f2d543"
+  version "0.2.3"
+  sha256 "1a6316deb3b3d0752be99faf87645b4bc2d819d33503c4e3a1a596c59d8a592f"
 
   url "https://github.com/aravind-n/twine/releases/download/v#{version}/Twine-#{version}-macos-arm64.dmg"
   name "Twine"
