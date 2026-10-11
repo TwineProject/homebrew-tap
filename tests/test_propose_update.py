@@ -43,6 +43,8 @@ class ProposeUpdateTests(unittest.TestCase):
         self.branch = f"cask/twine-app-{self.version}"
         self.bot = "twine-tap-updater[bot]"
         self.real_run = updater.run
+        self.repository = updater.REPOSITORY
+        self.app_slug = "twine-tap-updater"
 
     def git(self, *args):
         return subprocess.check_output(
@@ -63,7 +65,7 @@ class ProposeUpdateTests(unittest.TestCase):
         if args[1:3] == ("auth", "setup-git"):
             return ""
         if args[1:3] == ("pr", "create"):
-            return "https://github.com/standing-desks/homebrew-tap/pull/7"
+            return f"https://github.com/{self.repository}/pull/7"
         if args[1:3] == ("pr", "view"):
             head = self.remote_head()
             if args[-1] == "headRefOid,statusCheckRollup":
@@ -82,7 +84,7 @@ class ProposeUpdateTests(unittest.TestCase):
                 })
             files = self.git("diff", "--name-only", "main", head).splitlines()
             pull = {
-                "number": 7, "author": {"login": "app/twine-tap-updater", "is_bot": True},
+                "number": 7, "author": {"login": f"app/{self.app_slug}", "is_bot": True},
                 "baseRefName": "main",
                 "headRefName": self.branch, "headRefOid": head,
                 "isCrossRepository": False, "isDraft": False, "state": "OPEN",
@@ -96,7 +98,7 @@ class ProposeUpdateTests(unittest.TestCase):
     def propose(self):
         with patch.object(updater, "run", self.fake_run):
             updater.propose_update(
-                self.root, self.version, "twine-tap-updater", updater.REPOSITORY, "read-check-token"
+                self.root, self.version, self.app_slug, self.repository, "read-check-token"
             )
 
     def publish_existing_branch(self, extra_change=False):
@@ -139,14 +141,28 @@ class ProposeUpdateTests(unittest.TestCase):
                 self.assertIn(f"head=standing-desks:{self.branch}", lookup)
 
     def test_refuses_other_repositories_before_publishing(self):
-        for repository in ("TwineProject/homebrew-tap", "someone-else/homebrew-tap"):
+        for repository in ("TwineProject/other", "someone-else/homebrew-tap"):
             with self.subTest(repository=repository), patch.object(updater, "run", self.fake_run):
-                with self.assertRaisesRegex(ValueError, "restricted to standing-desks/homebrew-tap"):
+                with self.assertRaisesRegex(ValueError, "restricted to the two maintained Twine taps"):
                     updater.propose_update(
                         self.root, self.version, "twine-tap-updater", repository, "read-check-token"
                     )
                 self.assertEqual(self.gh_calls, [])
                 self.assertEqual(self.git("ls-remote", "--heads", "origin", self.branch), "")
+
+    def test_compatibility_tap_uses_its_own_repository_and_private_app(self):
+        self.repository = "TwineProject/homebrew-tap"
+        self.app_slug = "twine-tap-compat-updater"
+        self.bot = f"{self.app_slug}[bot]"
+        self.propose()
+        lookup = next(args for args in self.gh_calls if args[1:3] == ("api", "--method"))
+        self.assertIn(f"repos/{self.repository}/pulls", lookup)
+        self.assertIn(f"head=TwineProject:{self.branch}", lookup)
+        for args in self.gh_calls:
+            if args[1:3] in (("pr", "create"), ("pr", "view"), ("pr", "merge")):
+                self.assertEqual(args[args.index("--repo") + 1], self.repository)
+        self.assertEqual(self.git("show", "-s", "--format=%an", self.remote_head()), self.bot)
+        self.assertEqual(len(self.merge_calls()), 1)
 
     def test_refuses_changes_outside_the_cask(self):
         (self.root / "README.md").write_text("Unexpected edit\n")

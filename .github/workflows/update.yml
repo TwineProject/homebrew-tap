@@ -19,6 +19,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: macos-26
     timeout-minutes: 20
+    env:
+      TAP: ${{ github.repository_owner == 'TwineProject' && 'twineproject/tap' || 'standing-desks/tap' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,6 +38,7 @@ jobs:
         id: update
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.client_payload.release_tag }}
         run: make update
       - name: Install validation tools
         if: steps.update.outputs.changed == 'true'

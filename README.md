@@ -19,13 +19,13 @@ To update:
 
 ```sh
 brew update
-brew upgrade --cask twine-app
+brew upgrade --cask standing-desks/tap/twine-app
 ```
 
 To uninstall:
 
 ```sh
-brew uninstall --cask twine-app
+brew uninstall --cask standing-desks/tap/twine-app
 ```
 
 Normal uninstall preserves saved sessions, workflows, transcripts, and settings.
@@ -38,33 +38,6 @@ Twine before upgrading it.
 The cask installs the published DMG for the release. Release packages are
 Developer ID signed and notarized, and Homebrew verifies the download checksum before
 installation. See [Twine's install notes](https://aravind-n.github.io/twine/documentation/guide/#install).
-
-## Migrating from TwineProject
-
-This tap moved from `TwineProject/homebrew-tap` to
-`standing-desks/homebrew-tap`. GitHub redirects the old repository URL, and
-current Homebrew follows that redirect when updating the tap. Homebrew clears
-trust for the old tap name when the owner changes, so trust the cask at its new
-location once:
-
-```sh
-brew update
-brew trust --cask standing-desks/tap/twine-app
-brew upgrade --cask twine-app
-```
-
-Quit Twine before upgrading. If you updated an older Homebrew installation and
-`brew tap` still lists `twineproject/tap`, run `brew update` again before trusting
-the new cask. After migration, use the regular update commands above.
-
-In Brewfiles, replace `tap "twineproject/tap"` with `tap "standing-desks/tap"`
-and update any fully qualified cask references to
-`standing-desks/tap/twine-app`. If your organization manages
-`HOMEBREW_ALLOWED_TAPS`, it must allow the new tap.
-
-The cask remains `twine-app`, and the migration does not require uninstalling
-Twine. Avoid `brew untap --force` as a migration shortcut: it can uninstall
-packages from the tap.
 
 ## Validate locally
 
@@ -120,8 +93,8 @@ The **Update Twine cask** workflow runs when this tap receives a
 `aravind-n/twine` must send that event when a stable release is published. You
 can also start the updater manually from Actions; it has no timed schedule.
 
-The updater checks the latest published stable release directly from
-`aravind-n/twine`. It verifies the download checksum, validates the cask, and
+Release notifications select the published stable tag from `aravind-n/twine`;
+manual runs select its latest published stable release. It verifies the download checksum, validates the cask, and
 opens a PR as a dedicated GitHub App. The workflow waits for the required
 **Tap validation** check, then squash-merges that PR's exact validated commit.
 

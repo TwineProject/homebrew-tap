@@ -3,6 +3,11 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 cask=twine-app
+qualified_cask="${TAP:-standing-desks/tap}/$cask"
+case "$qualified_cask" in
+    standing-desks/tap/twine-app|twineproject/tap/twine-app) ;;
+    *) echo "Unsupported Twine cask: $qualified_cask" >&2; exit 1 ;;
+esac
 if brew list --cask "$cask" >/dev/null 2>&1; then
     echo "Uninstall $cask before running the installation smoke check" >&2
     exit 1
@@ -11,13 +16,13 @@ fi
 app_directory="$(mktemp -d "${TMPDIR:-/tmp}/twine-cask-install.XXXXXX")"
 cleanup() {
     if brew list --cask "$cask" >/dev/null 2>&1; then
-        brew uninstall --cask "$cask"
+        brew uninstall --cask "$qualified_cask"
     fi
     rm -rf "$app_directory"
 }
 trap cleanup EXIT
 
-brew install --cask --appdir="$app_directory" "standing-desks/tap/$cask"
+brew install --cask --appdir="$app_directory" "$qualified_cask"
 app="$app_directory/Twine.app"
 test -d "$app"
 expected="$(sed -n 's/^  version "\([^"]*\)"$/\1/p' "$repo/Casks/$cask.rb")"
@@ -36,7 +41,7 @@ esac
 codesign --verify --deep --strict "$app"
 xcrun stapler validate "$app"
 spctl --assess --type execute --verbose=2 "$app"
-archive="$(brew --cache --cask "standing-desks/tap/$cask")"
+archive="$(brew --cache --cask "$qualified_cask")"
 if [[ "$archive" == *.dmg ]]; then
     codesign --verify --strict "$archive"
     xcrun stapler validate "$archive"

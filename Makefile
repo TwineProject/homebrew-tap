@@ -1,7 +1,9 @@
 .DEFAULT_GOAL := help
 
 CASK_FILE := Casks/twine-app.rb
-CASK := standing-desks/tap/twine-app
+TAP ?= standing-desks/tap
+export TAP
+CASK := $(TAP)/twine-app
 export HOMEBREW_NO_AUTO_UPDATE := 1
 export HOMEBREW_NO_ANALYTICS := 1
 export HOMEBREW_NO_INSTALL_CLEANUP := 1
@@ -11,7 +13,7 @@ export PYTHONDONTWRITEBYTECODE := 1
 
 help:
 	@echo 'make fmt            Format the cask'
-	@echo 'make link-tap       Register this checkout as the local standing-desks/tap'
+	@echo 'make link-tap       Register this checkout as the local $(TAP)'
 	@echo 'make check          Check cask style, audit, workflows, scripts, and updater tests'
 	@echo 'make audit-online   Download and audit the released app'
 	@echo 'make install-smoke  Install into a temporary app directory, verify, then uninstall'
