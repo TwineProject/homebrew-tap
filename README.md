@@ -1,6 +1,6 @@
 # Twine Homebrew tap
 
-Homebrew distribution for [Twine](https://github.com/aravind-n/twine), a native
+Homebrew distribution for [Twine](https://github.com/standing-desks/twine), a native
 macOS workspace for coordinating coding agents. The GitHub repository
 is `standing-desks/homebrew-tap`, which Homebrew addresses as `standing-desks/tap`.
 
@@ -39,7 +39,7 @@ Twine before upgrading it.
 
 The cask installs the published DMG for the release. Release packages are
 Developer ID signed and notarized, and Homebrew verifies the download checksum before
-installation. See [Twine's install notes](https://aravind-n.github.io/twine/documentation/guide/#install).
+installation. See [Twine's install notes](https://standing-desks.github.io/twine/documentation/guide/#install).
 
 ## Validate locally
 
@@ -77,7 +77,7 @@ make install-smoke
 git diff -- Casks/twine-ade.rb
 ```
 
-The updater accepts published `vMAJOR.MINOR.PATCH` releases from `aravind-n/twine`,
+The updater accepts published `vMAJOR.MINOR.PATCH` releases from `standing-desks/twine`,
 prefers a DMG, and falls back to a ZIP. It determines the architecture from the
 selected asset's filename, accepting ARM64 or universal packages regardless of
 release version and rejecting ambiguous packages. ARM64 packages add
@@ -92,10 +92,10 @@ version in place.
 
 The **Update Twine cask** workflow runs when this tap receives a
 `repository_dispatch` event of type `twine-release-published`. A workflow in
-`aravind-n/twine` must send that event when a stable release is published. You
+`standing-desks/twine` must send that event when a stable release is published. You
 can also start the updater manually from Actions; it has no timed schedule.
 
-Release notifications select the published stable tag from `aravind-n/twine`;
+Release notifications select the published stable tag from `standing-desks/twine`;
 manual runs select its latest published stable release. It verifies the download checksum, validates the cask, and
 opens a PR as a dedicated GitHub App. The workflow waits for the required
 **Tap validation** check, then squash-merges that PR's exact validated commit.
