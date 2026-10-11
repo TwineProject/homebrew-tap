@@ -1,10 +1,10 @@
-cask "twine-app" do
+cask "twine-ade" do
   version "0.2.5"
   sha256 "a3ab1e18a1e38df244768ad0a57cfc483681fcc05b0f185ab998724b6e347551"
 
   url "https://github.com/aravind-n/twine/releases/download/v#{version}/Twine-#{version}-macos-arm64.dmg"
   name "Twine"
-  desc "Workspace for coordinating coding agents"
+  desc "Agent development environment for coordinating coding agents"
   homepage "https://github.com/aravind-n/twine"
 
   livecheck do

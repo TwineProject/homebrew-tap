@@ -7,25 +7,27 @@ is `standing-desks/homebrew-tap`, which Homebrew addresses as `standing-desks/ta
 Twine requires macOS 26 or later. Architecture requirements follow the release
 package: ARM64 packages require Apple Silicon; universal packages also support Intel.
 
+The cask is `twine-ade`, short for agent development environment.
+
 ## Install and update
 
 To install:
 
 ```sh
-brew install --cask standing-desks/tap/twine-app
+brew install --cask standing-desks/tap/twine-ade
 ```
 
 To update:
 
 ```sh
 brew update
-brew upgrade --cask standing-desks/tap/twine-app
+brew upgrade --cask standing-desks/tap/twine-ade
 ```
 
 To uninstall:
 
 ```sh
-brew uninstall --cask standing-desks/tap/twine-app
+brew uninstall --cask standing-desks/tap/twine-ade
 ```
 
 Normal uninstall preserves saved sessions, workflows, transcripts, and settings.
@@ -72,7 +74,7 @@ make update
 make check
 make audit-online
 make install-smoke
-git diff -- Casks/twine-app.rb
+git diff -- Casks/twine-ade.rb
 ```
 
 The updater accepts published `vMAJOR.MINOR.PATCH` releases from `aravind-n/twine`,
@@ -100,7 +102,7 @@ opens a PR as a dedicated GitHub App. The workflow waits for the required
 
 Only the `maintainers` team and update App can merge to `main`. Both must use PRs
 and pass the checks, including administrators. The bot merges only its own
-verified update to `Casks/twine-app.rb`; it does not merge other contributions.
+verified update to `Casks/twine-ade.rb`; it does not merge other contributions.
 Human approval is not required for these release updates. GitHub's general
 auto-merge option is disabled; automatic merging is performed by this updater.
 

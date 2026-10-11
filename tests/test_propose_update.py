@@ -26,7 +26,7 @@ class ProposeUpdateTests(unittest.TestCase):
         self.cask = self.root / updater.CASK
         self.current_version = "1.2.3"
         self.version = "1.2.4"
-        self.cask.write_text(f'cask "twine-app" do\n  version "{self.current_version}"\nend\n')
+        self.cask.write_text(f'cask "twine-ade" do\n  version "{self.current_version}"\nend\n')
         (self.root / "README.md").write_text("Tap documentation\n")
         self.git("add", ".")
         self.git("commit", "-m", "tap: add initial cask")
@@ -40,7 +40,7 @@ class ProposeUpdateTests(unittest.TestCase):
         self.validation_states = ["SUCCESS"]
         self.validation_head = None
         self.check_tokens = []
-        self.branch = f"cask/twine-app-{self.version}"
+        self.branch = f"cask/twine-ade-{self.version}"
         self.bot = "twine-tap-updater[bot]"
         self.real_run = updater.run
         self.repository = updater.REPOSITORY
@@ -119,8 +119,8 @@ class ProposeUpdateTests(unittest.TestCase):
             with self.subTest(version=version):
                 self.git("switch", "main")
                 self.version = version
-                self.branch = f"cask/twine-app-{version}"
-                self.cask.write_text(f'cask "twine-app" do\n  version "{version}"\nend\n')
+                self.branch = f"cask/twine-ade-{version}"
+                self.cask.write_text(f'cask "twine-ade" do\n  version "{version}"\nend\n')
                 self.gh_calls = []
                 self.check_tokens = []
                 self.propose()

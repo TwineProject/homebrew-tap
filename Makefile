@@ -1,9 +1,9 @@
 .DEFAULT_GOAL := help
 
-CASK_FILE := Casks/twine-app.rb
+CASK_FILE := Casks/twine-ade.rb
 TAP ?= standing-desks/tap
 export TAP
-CASK := $(TAP)/twine-app
+CASK := $(TAP)/twine-ade
 export HOMEBREW_NO_AUTO_UPDATE := 1
 export HOMEBREW_NO_ANALYTICS := 1
 export HOMEBREW_NO_INSTALL_CLEANUP := 1

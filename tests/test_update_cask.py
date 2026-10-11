@@ -20,7 +20,7 @@ CHECKSUM = hashlib.sha256(PAYLOAD).hexdigest()
 def cask_source(version=BASE_VERSION, architecture="universal"):
     requirement = "  depends_on arch: :arm64\n" if architecture == "arm64" else ""
     return f"""\
-cask "twine-app" do
+cask "twine-ade" do
   version "{version}"
   sha256 "{'0' * 64}"
 
@@ -145,7 +145,7 @@ class UpdateCaskTests(unittest.TestCase):
             with self.subTest(older=older, current=current), \
                     tempfile.TemporaryDirectory() as directory:
                 source = cask_source(current)
-                cask = Path(directory) / "twine-app.rb"
+                cask = Path(directory) / "twine-ade.rb"
                 cask.write_text(source)
                 with patch("scripts.update_cask.subprocess.run") as downloads:
                     for version in (current, older):
@@ -158,7 +158,7 @@ class UpdateCaskTests(unittest.TestCase):
             for architecture in ("arm64", "universal"):
                 with self.subTest(current=current, version=version, architecture=architecture), \
                         tempfile.TemporaryDirectory() as directory:
-                    cask = Path(directory) / "twine-app.rb"
+                    cask = Path(directory) / "twine-ade.rb"
                     cask.write_text(cask_source(current))
                     with patch("scripts.update_cask.subprocess.run", side_effect=download):
                         self.assertEqual(update_cask(release(version, architecture=architecture),
@@ -174,7 +174,7 @@ class UpdateCaskTests(unittest.TestCase):
 
     def test_architecture_requirements_follow_the_selected_asset(self):
         with tempfile.TemporaryDirectory() as directory:
-            cask = Path(directory) / "twine-app.rb"
+            cask = Path(directory) / "twine-ade.rb"
             cask.write_text(cask_source())
             with patch("scripts.update_cask.subprocess.run", side_effect=download):
                 for patch_number, architecture in enumerate(("arm64", "arm64", "universal", "arm64"), 4):
@@ -198,7 +198,7 @@ class UpdateCaskTests(unittest.TestCase):
             with self.subTest(architecture=architecture), \
                     tempfile.TemporaryDirectory() as directory:
                 source = cask_source()
-                cask = Path(directory) / "twine-app.rb"
+                cask = Path(directory) / "twine-ade.rb"
                 cask.write_text(source)
 
                 def tampered_download(args, **kwargs):
