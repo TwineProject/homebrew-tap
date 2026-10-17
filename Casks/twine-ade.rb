@@ -1,6 +1,6 @@
 cask "twine-ade" do
-  version "0.3.2"
-  sha256 "ed047e3463f436ab7c4def864ff9b83a6c852ab0b2f938d3c208e48c4ac3f230"
+  version "0.3.3"
+  sha256 "e5bc3f6714f2ecf59d4c3576c16eac66a4d81f01bb640e18719ee77ce208652b"
 
   url "https://github.com/standing-desks/twine/releases/download/v#{version}/Twine-#{version}-macos-arm64.dmg"
   name "Twine"
