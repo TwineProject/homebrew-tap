@@ -6,14 +6,14 @@ import os
 import re
 import subprocess
 
-REPOSITORY = "standing-desks/homebrew-tap"
-REPOSITORIES = {REPOSITORY, "TwineProject/homebrew-tap"}
+REPOSITORY = "TwineProject/homebrew-tap"
+REPOSITORIES = {"standing-desks/homebrew-tap", REPOSITORY}
 
 
 def main():
     repository = os.environ.get("GH_REPO", REPOSITORY)
     if repository not in REPOSITORIES:
-        raise ValueError("Branch protection is restricted to the two maintained Twine taps")
+        raise ValueError("Branch protection is restricted to the two maintained Handshake taps")
     app_slug = os.environ.get("APP_SLUG", "")
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", app_slug):
         raise ValueError("Set APP_SLUG to the installed tap update App's slug")

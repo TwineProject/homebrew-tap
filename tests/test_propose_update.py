@@ -14,7 +14,7 @@ spec.loader.exec_module(updater)
 
 class ProposeUpdateTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="twine-pr-test-")
+        self.temp = tempfile.TemporaryDirectory(prefix="handshake-pr-test-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name) / "checkout"
         self.remote = Path(self.temp.name) / "remote.git"
@@ -26,7 +26,7 @@ class ProposeUpdateTests(unittest.TestCase):
         self.cask = self.root / updater.CASK
         self.current_version = "1.2.3"
         self.version = "1.2.4"
-        self.cask.write_text(f'cask "twine-ade" do\n  version "{self.current_version}"\nend\n')
+        self.cask.write_text(f'cask "handshake" do\n  version "{self.current_version}"\nend\n')
         (self.root / "README.md").write_text("Tap documentation\n")
         self.git("add", ".")
         self.git("commit", "-m", "tap: add initial cask")
@@ -40,7 +40,7 @@ class ProposeUpdateTests(unittest.TestCase):
         self.validation_states = ["SUCCESS"]
         self.validation_head = None
         self.check_tokens = []
-        self.branch = f"cask/twine-ade-{self.version}"
+        self.branch = f"cask/handshake-{self.version}"
         self.bot = "twine-tap-updater[bot]"
         self.real_run = updater.run
         self.repository = updater.REPOSITORY
@@ -106,7 +106,7 @@ class ProposeUpdateTests(unittest.TestCase):
         if extra_change:
             (self.root / "README.md").write_text("Unexpected documentation edit\n")
         self.git("add", ".")
-        self.git("commit", "-m", f"cask: replace Twine release with {self.version}")
+        self.git("commit", "-m", f"cask: replace Handshake release with {self.version}")
         self.git("push", "origin", self.branch)
         self.git("switch", "main")
         self.cask.write_text(self.cask.read_text().replace(self.current_version, self.version))
@@ -119,8 +119,8 @@ class ProposeUpdateTests(unittest.TestCase):
             with self.subTest(version=version):
                 self.git("switch", "main")
                 self.version = version
-                self.branch = f"cask/twine-ade-{version}"
-                self.cask.write_text(f'cask "twine-ade" do\n  version "{version}"\nend\n')
+                self.branch = f"cask/handshake-{version}"
+                self.cask.write_text(f'cask "handshake" do\n  version "{version}"\nend\n')
                 self.gh_calls = []
                 self.check_tokens = []
                 self.propose()
@@ -135,15 +135,15 @@ class ProposeUpdateTests(unittest.TestCase):
                 creation = next(args for args in self.gh_calls if args[1:3] == ("pr", "create"))
                 self.assertEqual(creation[creation.index("--head") + 1], self.branch)
                 self.assertEqual(creation[creation.index("--title") + 1],
-                                 f"cask: replace Twine release with {version}")
+                                 f"cask: replace Handshake release with {version}")
                 lookup = next(args for args in self.gh_calls if args[1:3] == ("api", "--method"))
-                self.assertIn("repos/standing-desks/homebrew-tap/pulls", lookup)
-                self.assertIn(f"head=standing-desks:{self.branch}", lookup)
+                self.assertIn(f"repos/{self.repository}/pulls", lookup)
+                self.assertIn(f"head={self.repository.split('/')[0]}:{self.branch}", lookup)
 
     def test_refuses_other_repositories_before_publishing(self):
         for repository in ("TwineProject/other", "someone-else/homebrew-tap"):
             with self.subTest(repository=repository), patch.object(updater, "run", self.fake_run):
-                with self.assertRaisesRegex(ValueError, "restricted to the two maintained Twine taps"):
+                with self.assertRaisesRegex(ValueError, "restricted to the two maintained Handshake taps"):
                     updater.propose_update(
                         self.root, self.version, "twine-tap-updater", repository, "read-check-token"
                     )

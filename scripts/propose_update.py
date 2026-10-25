@@ -9,9 +9,9 @@ import subprocess
 import tempfile
 import time
 
-REPOSITORY = "standing-desks/homebrew-tap"
-REPOSITORIES = {REPOSITORY, "TwineProject/homebrew-tap"}
-CASK = "Casks/twine-ade.rb"
+REPOSITORY = "TwineProject/homebrew-tap"
+REPOSITORIES = {"standing-desks/homebrew-tap", REPOSITORY}
+CASK = "Casks/handshake.rb"
 
 def run(root, *args, token=None):
     return subprocess.run(
@@ -45,7 +45,7 @@ def wait_for_validation(root, number, head, check_token, repository=REPOSITORY, 
 
 def propose_update(root, version, app_slug, repository, check_token):
     if repository not in REPOSITORIES:
-        raise ValueError("The update bot is restricted to the two maintained Twine taps")
+        raise ValueError("The update bot is restricted to the two maintained Handshake taps")
     owner = repository.split("/", 1)[0]
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version):
         raise ValueError("Expected a stable MAJOR.MINOR.PATCH version")
@@ -54,7 +54,7 @@ def propose_update(root, version, app_slug, repository, check_token):
     if f'  version "{version}"' not in (root / CASK).read_text():
         raise ValueError("The cask does not contain the validated version")
 
-    branch = f"cask/twine-ade-{version}"
+    branch = f"cask/handshake-{version}"
     bot = f"{app_slug}[bot]"
     pulls = json.loads(run(
         root, "gh", "api", "--method", "GET", f"repos/{repository}/pulls",
@@ -71,7 +71,7 @@ def propose_update(root, version, app_slug, repository, check_token):
 
     changes = run(root, "git", "status", "--porcelain", "--untracked-files=all")
     if changes not in (f" M {CASK}", f"M  {CASK}"):
-        raise ValueError("A release update must change only Casks/twine-ade.rb")
+        raise ValueError("A release update must change only Casks/handshake.rb")
     run(root, "git", "add", "--", CASK)
     validated_tree = run(root, "git", "write-tree")
     run(root, "gh", "auth", "setup-git", "--hostname", "github.com")
@@ -90,24 +90,24 @@ def propose_update(root, version, app_slug, repository, check_token):
         run(
             root, "git", "-c", f"user.name={bot}",
             "-c", f"user.email={user['id']}+{bot}@users.noreply.github.com",
-            "commit", "-m", f"cask: replace Twine release with {version}",
+            "commit", "-m", f"cask: replace Handshake release with {version}",
         )
         head = run(root, "git", "rev-parse", "HEAD")
         run(root, "git", "push", "origin", f"HEAD:refs/heads/{branch}")
 
     if existing is None:
-        with tempfile.TemporaryDirectory(prefix="twine-cask-pr-") as directory:
+        with tempfile.TemporaryDirectory(prefix="handshake-cask-pr-") as directory:
             body = Path(directory) / "body.md"
             body.write_text(
-                f"Update Twine to the published stable release v{version}.\n\n"
+                f"Update Handshake to the published stable release v{version}.\n\n"
                 "The updater verified the archive against SHA256SUMS. Cask style, "
                 "audit, updater tests, and installation checks passed before this PR.\n\n"
-                f"Upstream release: https://github.com/standing-desks/twine/releases/tag/v{version}\n"
+                f"Upstream release: https://github.com/standing-desks/handshake/releases/tag/v{version}\n"
             )
             print(run(
                 root, "gh", "pr", "create", "--repo", repository,
                 "--base", "main", "--head", branch,
-                "--title", f"cask: replace Twine release with {version}",
+                "--title", f"cask: replace Handshake release with {version}",
                 "--body-file", str(body),
             ))
 

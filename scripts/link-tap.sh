@@ -2,10 +2,10 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd -P)"
-tap="${TAP:-standing-desks/tap}"
+tap="${TAP:-twineproject/tap}"
 case "$tap" in
     standing-desks/tap|twineproject/tap) ;;
-    *) echo "Unsupported Twine tap: $tap" >&2; exit 1 ;;
+    *) echo "Unsupported Handshake tap: $tap" >&2; exit 1 ;;
 esac
 tap_directory="$(brew --repository)/Library/Taps/${tap%/*}/homebrew-${tap#*/}"
 if [[ -e "$tap_directory" || -L "$tap_directory" ]]; then

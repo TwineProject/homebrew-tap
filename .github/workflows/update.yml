@@ -1,8 +1,8 @@
-name: Update Twine cask
+name: Update Handshake cask
 
 on:
   repository_dispatch:
-    types: [twine-release-published]
+    types: [handshake-release-published, twine-release-published]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
   checks: read
 
 concurrency:
-  group: update-twine-cask
+  group: update-handshake-cask
   cancel-in-progress: false
 
 jobs:
