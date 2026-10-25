@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update the Twine cask from a published stable GitHub release."""
+"""Update the Handshake cask from a published stable GitHub release."""
 
 import hashlib
 import json
@@ -11,8 +11,8 @@ import tempfile
 import zipfile
 
 
-UPSTREAM = "standing-desks/twine"
-CASK = Path(__file__).resolve().parents[1] / "Casks/twine-ade.rb"
+UPSTREAM = "standing-desks/handshake"
+CASK = Path(__file__).resolve().parents[1] / "Casks/handshake.rb"
 VERSION = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
 
 
@@ -32,17 +32,17 @@ def release_asset(release):
     version_tuple(version)
     assets = release["assets"]
     for extension in ("dmg", "zip"):
-        names = {f"Twine-{version}-macos-{architecture}.{extension}": architecture
+        names = {f"Handshake-{version}-macos-{architecture}.{extension}": architecture
                  for architecture in ("arm64", "universal")}
         matches = [asset for asset in assets if asset["name"] in names]
         if len(matches) > 1:
-            raise ValueError(f"Duplicate or ambiguous Twine {extension.upper()} assets")
+            raise ValueError(f"Duplicate or ambiguous Handshake {extension.upper()} assets")
         if matches:
             if sum(asset["name"] == "SHA256SUMS" for asset in assets) != 1:
                 raise ValueError("Expected exactly one SHA256SUMS release asset")
             asset = matches[0]
             return version, extension, names[asset["name"]], asset
-    raise ValueError("Release has no supported Twine DMG or ZIP")
+    raise ValueError("Release has no supported Handshake DMG or ZIP")
 
 
 def verified_checksum(archive, checksums, asset):
@@ -67,16 +67,16 @@ def verified_checksum(archive, checksums, asset):
 
 def app_source(archive, version, extension):
     if extension == "dmg":
-        return "Twine.app"
+        return "Handshake.app"
     with zipfile.ZipFile(archive) as package:
         suffix = "/Contents/Info.plist"
         matches = [name[:-len(suffix)] for name in package.namelist()
-                   if name.endswith("Twine.app" + suffix)]
-    if matches == ["Twine.app"]:
-        return "Twine.app"
-    if matches == [f"Twine-{version}/Twine.app"]:
-        return "Twine-#{version}/Twine.app"
-    raise ValueError("ZIP must contain exactly one Twine.app in a supported layout")
+                   if name.endswith("Handshake.app" + suffix)]
+    if matches == ["Handshake.app"]:
+        return "Handshake.app"
+    if matches == [f"Handshake-{version}/Handshake.app"]:
+        return "Handshake-#{version}/Handshake.app"
+    raise ValueError("ZIP must contain exactly one Handshake.app in a supported layout")
 
 
 def update_cask(release, cask=CASK):
@@ -86,10 +86,10 @@ def update_cask(release, cask=CASK):
     if len(current) != 1:
         raise ValueError("Expected exactly one cask version")
     if version_tuple(version) <= version_tuple(current[0]):
-        print(f"Keeping Twine {current[0]}; latest selected release is {version}")
+        print(f"Keeping Handshake {current[0]}; latest selected release is {version}")
         return current[0], False
 
-    with tempfile.TemporaryDirectory(prefix="twine-cask-") as directory:
+    with tempfile.TemporaryDirectory(prefix="handshake-cask-") as directory:
         subprocess.run(
             ["gh", "release", "download", release["tag_name"], "--repo", UPSTREAM,
              "--pattern", asset["name"], "--pattern", "SHA256SUMS", "--dir", directory],
@@ -105,7 +105,7 @@ def update_cask(release, cask=CASK):
         "version": version,
         "sha256": checksum,
         "url": (f"https://github.com/{UPSTREAM}/releases/download/v#{{version}}/"
-                f"Twine-#{{version}}-macos-{architecture}.{extension}"),
+                f"Handshake-#{{version}}-macos-{architecture}.{extension}"),
         "app": application,
     }
     for field, value in replacements.items():
@@ -130,7 +130,7 @@ def update_cask(release, cask=CASK):
     temporary = cask.with_suffix(".rb.tmp")
     temporary.write_text(contents)
     temporary.replace(cask)
-    print(f"Updated Twine {current[0]} to {version} ({extension}, SHA-256 verified)")
+    print(f"Updated Handshake {current[0]} to {version} ({extension}, SHA-256 verified)")
     return version, True
 
 

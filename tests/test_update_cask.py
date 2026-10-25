@@ -20,15 +20,15 @@ CHECKSUM = hashlib.sha256(PAYLOAD).hexdigest()
 def cask_source(version=BASE_VERSION, architecture="universal"):
     requirement = "  depends_on arch: :arm64\n" if architecture == "arm64" else ""
     return f"""\
-cask "twine-ade" do
+cask "handshake" do
   version "{version}"
   sha256 "{'0' * 64}"
 
-  url "https://github.com/standing-desks/twine/releases/download/v#{{version}}/Twine-#{{version}}-macos-{architecture}.zip"
+  url "https://github.com/standing-desks/handshake/releases/download/v#{{version}}/Handshake-#{{version}}-macos-{architecture}.zip"
 
 {requirement}  depends_on macos: :tahoe
 
-  app "Twine-#{{version}}/Twine.app"
+  app "Handshake-#{{version}}/Handshake.app"
 end
 """
 
@@ -37,7 +37,7 @@ def release(version=NEXT_VERSION, extensions=("dmg", "zip"), architecture="unive
     return {
         "tag_name": f"v{version}", "draft": False, "prerelease": False,
         "published_at": "2026-10-06T12:00:00Z",
-        "assets": [{"name": f"Twine-{version}-macos-{architecture}.{extension}"}
+        "assets": [{"name": f"Handshake-{version}-macos-{architecture}.{extension}"}
                    for extension in extensions] + [{"name": "SHA256SUMS"}],
     }
 
@@ -75,7 +75,7 @@ class UpdateCaskTests(unittest.TestCase):
                         selected = release_asset(candidate)
                         self.assertEqual(selected[:3], (version, extension, architecture))
                         self.assertEqual(selected[3]["name"],
-                                         f"Twine-{version}-macos-{architecture}.{extension}")
+                                         f"Handshake-{version}-macos-{architecture}.{extension}")
 
     def test_ambiguous_architecture_assets_are_rejected(self):
         for extra in (release(architecture="arm64")["assets"][0],
@@ -89,21 +89,21 @@ class UpdateCaskTests(unittest.TestCase):
     def test_zip_app_layout_and_ambiguous_archives(self):
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory) / "app.zip"
-            for source, expected in (("Twine.app", "Twine.app"),
-                                     (f"Twine-{NEXT_VERSION}/Twine.app",
-                                      "Twine-#{version}/Twine.app")):
+            for source, expected in (("Handshake.app", "Handshake.app"),
+                                     (f"Handshake-{NEXT_VERSION}/Handshake.app",
+                                      "Handshake-#{version}/Handshake.app")):
                 with zipfile.ZipFile(archive, "w") as package:
                     package.writestr(source + "/Contents/Info.plist", b"plist")
                 self.assertEqual(app_source(archive, NEXT_VERSION, "zip"), expected)
             with zipfile.ZipFile(archive, "w") as package:
-                package.writestr("Twine.app/Contents/Info.plist", b"plist")
-                package.writestr(f"Twine-{NEXT_VERSION}/Twine.app/Contents/Info.plist", b"plist")
+                package.writestr("Handshake.app/Contents/Info.plist", b"plist")
+                package.writestr(f"Handshake-{NEXT_VERSION}/Handshake.app/Contents/Info.plist", b"plist")
             with self.assertRaises(ValueError):
                 app_source(archive, NEXT_VERSION, "zip")
 
     def test_incomplete_or_ambiguous_assets_are_rejected(self):
         for assets in ([], [{"name": "SHA256SUMS"}], [release()["assets"][0]],
-                       [{"name": f"Twine-{NEXT_VERSION}-macos-unknown.dmg"},
+                       [{"name": f"Handshake-{NEXT_VERSION}-macos-unknown.dmg"},
                         {"name": "SHA256SUMS"}],
                        release()["assets"] + [release()["assets"][0]],
                        release()["assets"] + [{"name": "SHA256SUMS"}]):
@@ -145,7 +145,7 @@ class UpdateCaskTests(unittest.TestCase):
             with self.subTest(older=older, current=current), \
                     tempfile.TemporaryDirectory() as directory:
                 source = cask_source(current)
-                cask = Path(directory) / "twine-ade.rb"
+                cask = Path(directory) / "handshake.rb"
                 cask.write_text(source)
                 with patch("scripts.update_cask.subprocess.run") as downloads:
                     for version in (current, older):
@@ -158,23 +158,23 @@ class UpdateCaskTests(unittest.TestCase):
             for architecture in ("arm64", "universal"):
                 with self.subTest(current=current, version=version, architecture=architecture), \
                         tempfile.TemporaryDirectory() as directory:
-                    cask = Path(directory) / "twine-ade.rb"
+                    cask = Path(directory) / "handshake.rb"
                     cask.write_text(cask_source(current))
                     with patch("scripts.update_cask.subprocess.run", side_effect=download):
                         self.assertEqual(update_cask(release(version, architecture=architecture),
                                                      cask), (version, True))
                     result = cask.read_text()
                     self.assertIn(f'version "{version}"', result)
-                    self.assertIn(f'Twine-#{{version}}-macos-{architecture}.dmg"', result)
+                    self.assertIn(f'Handshake-#{{version}}-macos-{architecture}.dmg"', result)
                     self.assertIn(CHECKSUM, result)
-                    self.assertIn('app "Twine.app"', result)
+                    self.assertIn('app "Handshake.app"', result)
                     self.assertIn('depends_on macos: :tahoe', result)
                     self.assertEqual(result.count('depends_on arch: :arm64'),
                                      1 if architecture == "arm64" else 0)
 
     def test_architecture_requirements_follow_the_selected_asset(self):
         with tempfile.TemporaryDirectory() as directory:
-            cask = Path(directory) / "twine-ade.rb"
+            cask = Path(directory) / "handshake.rb"
             cask.write_text(cask_source())
             with patch("scripts.update_cask.subprocess.run", side_effect=download):
                 for patch_number, architecture in enumerate(("arm64", "arm64", "universal", "arm64"), 4):
@@ -198,7 +198,7 @@ class UpdateCaskTests(unittest.TestCase):
             with self.subTest(architecture=architecture), \
                     tempfile.TemporaryDirectory() as directory:
                 source = cask_source()
-                cask = Path(directory) / "twine-ade.rb"
+                cask = Path(directory) / "handshake.rb"
                 cask.write_text(source)
 
                 def tampered_download(args, **kwargs):
