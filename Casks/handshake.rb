@@ -1,6 +1,6 @@
 cask "handshake" do
-  version "0.4.1"
-  sha256 "0b498cbd32f0526f01c693749bc55f853bc715c802df749648dc0be466025af9"
+  version "0.4.2"
+  sha256 "58a8047c3a9cd0a476c77e6ce4745be482b04c86bc42eabe955df48bb1b281b4"
 
   url "https://github.com/standing-desks/handshake/releases/download/v#{version}/Handshake-#{version}-macos-arm64.dmg"
   name "Handshake"
