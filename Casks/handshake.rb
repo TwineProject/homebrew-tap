@@ -5,7 +5,7 @@ cask "handshake" do
   url "https://github.com/standing-desks/handshake/releases/download/v#{version}/Handshake-#{version}-macos-arm64.dmg"
   name "Handshake"
   desc "Agent development environment for coordinating coding agents"
-  homepage "https://github.com/standing-desks/handshake"
+  homepage "https://standing-desks.github.io/handshake/"
 
   livecheck do
     url :url
