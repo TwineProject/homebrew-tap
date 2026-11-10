@@ -17,6 +17,8 @@ jobs:
     env:
       TAP: ${{ github.repository_owner == 'TwineProject' && 'twineproject/tap' || 'standing-desks/tap' }}
     steps:
+      - name: Log Homebrew version
+        run: brew --version
       - uses: actions/checkout@v7
       - name: Install validation tools
         run: brew install actionlint shellcheck

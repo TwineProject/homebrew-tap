@@ -85,7 +85,9 @@ uninstalls the cask. It does not launch Handshake and refuses to run if this cas
 already installed.
 
 The Homebrew checks register this checkout as `twineproject/tap` through a local
-symlink. They refuse to replace an existing tap pointing at a different checkout.
+symlink and, on Homebrew versions that support tap trust, explicitly trust the
+`handshake` cask before auditing it. They refuse to replace an existing tap
+pointing at a different checkout.
 To remove the local registration later, run `brew untap twineproject/tap`.
 
 To update the cask locally after publishing a stable release, run `make update`.
