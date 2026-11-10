@@ -9,12 +9,17 @@ case "$tap" in
 esac
 tap_directory="$(brew --repository)/Library/Taps/${tap%/*}/homebrew-${tap#*/}"
 if [[ -e "$tap_directory" || -L "$tap_directory" ]]; then
-    if [[ "$(cd "$tap_directory" && pwd -P)" == "$repo" ]]; then
-        exit 0
+    if [[ "$(cd "$tap_directory" && pwd -P)" != "$repo" ]]; then
+        echo "$tap already points to another checkout: $tap_directory" >&2
+        exit 1
     fi
-    echo "$tap already points to another checkout: $tap_directory" >&2
-    exit 1
+else
+    mkdir -p "$(dirname "$tap_directory")"
+    ln -s "$repo" "$tap_directory"
+    echo "Linked $tap to $repo"
 fi
-mkdir -p "$(dirname "$tap_directory")"
-ln -s "$repo" "$tap_directory"
-echo "Linked $tap to $repo"
+
+# Homebrew 6+ requires explicit trust before audit can load the cask.
+if brew command trust >/dev/null 2>&1; then
+    brew trust --cask "$tap/handshake"
+fi
